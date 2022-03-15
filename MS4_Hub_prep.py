@@ -45,16 +45,16 @@ wsheds = editors + r"\ASM_EDITORS.GIS.MS4\ASM_EDITORS.GIS.MS4_Watersheds"
 zoning = egh_public + r"\EGH_PUBLIC.ARCMAP_ADMIN.zoning_pdx"
 lines = egh_public + r"\EGH_PUBLIC.ARCMAP_ADMIN.collection_lines_bes_pdx"
 
-print "Starting MS4_Hub_prep..."
+print("Starting MS4_Hub_prep...")
 
 #copy main features to working location
-print "Copying from source to temp"
+print("Copying from source to temp")
 of_points_copy = arcpy.CopyFeatures_management(of_points, temp + r"\of_points_copy", "", "0", "0", "0")
 of_bounds_copy = arcpy.CopyFeatures_management(of_bounds, temp + r"\of_bounds_copy", "", "0", "0", "0")
 wsheds_copy = arcpy.CopyFeatures_management(wsheds, temp + r"\wsheds_copy", "", "0", "0", "0")
 
 #add and calc some fields
-print "Adding fields and initializing values"
+print("Adding fields and initializing values")
 arcpy.AddField_management(of_points_copy,"Pipe_Dia","DOUBLE")
 arcpy.AddField_management(of_bounds_copy,"Area_Acres","DOUBLE")
 arcpy.AddField_management(of_bounds_copy,"Acres_IND","DOUBLE")
@@ -63,7 +63,7 @@ arcpy.CalculateField_management(wsheds_copy,"Area_Acres","round(!Shape_Area!/435
 arcpy.CalculateField_management(of_bounds_copy,"Area_Acres","round(!Shape_Area!/43560,2)","PYTHON","#")
 
 #calculating prelimenary IND area acres
-print "Calculating prelimenary IND area acres"
+print("Calculating prelimenary IND area acres")
 zoningfl = "zoningfl"
 #these 'employment' codes ('EG1', 'EG2', 'EX') were explicitly included per Patrice in addition to core IND codes
 arcpy.MakeFeatureLayer_management(zoning, zoningfl, "ZONE in ( 'EG1', 'EG2', 'EX', 'IG1', 'IG2', 'IH')")
@@ -76,7 +76,7 @@ arcpy.AddField_management(bounds_zoning_diss,"Acres_calc","DOUBLE")
 arcpy.CalculateField_management(bounds_zoning_diss,"Acres_calc","round(!SUM_SHAPE_Area!/43560,2)","PYTHON","#")
 
 #calculating area of IND for OF bounds
-print "Calculating area of IND and total area for OF bounds"
+print("Calculating area of IND and total area for OF bounds")
 values={}
 with arcpy.da.SearchCursor(bounds_zoning_diss,["Index_ID","Acres_calc"]) as cursor:
     for row in cursor:
@@ -96,7 +96,7 @@ with arcpy.da.UpdateCursor(of_bounds_copy, ["Index_ID", "Acres_IND"]) as cursor:
 arcpy.CalculateField_management(of_bounds_copy,"Area_Acres","round(!SHAPE_Area!/43560,2)","PYTHON","#")
 
 # calculating pipe diameter on OF points
-print "Calculating pipe diameter on OF points"
+print("Calculating pipe diameter on OF points")
 values={}
 with arcpy.da.SearchCursor(lines,["TO_NODE","PIPESIZE"]) as cursor:
     for row in cursor:
@@ -111,13 +111,13 @@ with arcpy.da.UpdateCursor(of_points_copy, ["HANSEN_ID", "Pipe_Dia"]) as cursor:
             cursor.updateRow(row)
 
 # convert Watershed field (bounds) and Watershed_ (watersheds) from integer (used in subtype) to text
-print "Adding temp Watershed fields"
+print("Adding temp Watershed fields")
 arcpy.AddField_management(of_points_copy,"Watershed_txt","TEXT","","",25)
 arcpy.AddField_management(of_bounds_copy,"Watershed_txt","TEXT","","",25)
 arcpy.AddField_management(wsheds_copy,"Watershed_txt","TEXT","","",25)
 
 # remove watershed subtypes
-print "Removing watershed subtyptes"
+print("Removing watershed subtyptes")
 subtype_list = [1,2,3,4,5,6]
 arcpy.RemoveSubtype_management(of_points_copy,subtype_list)
 arcpy.RemoveSubtype_management(of_bounds_copy,subtype_list)
@@ -130,7 +130,7 @@ type_dict = ({1:"COLUMBIA RIVER",
 5:"WILLAMETTE RIVER",
 6:"N/A"})
 
-print "Filling fields from dictionary..."
+print("Filling fields from dictionary...")
 fillField_fromDict(of_points_copy,type_dict,"Watershed","Watershed_txt")
 fillField_fromDict(of_bounds_copy,type_dict,"Watershed","Watershed_txt")
 fillField_fromDict(wsheds_copy,type_dict,"Watershed_","Watershed_txt")
@@ -140,7 +140,7 @@ arcpy.DeleteField_management(of_points_copy,"Watershed")
 arcpy.DeleteField_management(of_bounds_copy,"Watershed")
 arcpy.DeleteField_management(wsheds_copy,"Watershed_")
 
-print "Renaming fields"
+print("Renaming fields")
 rename_dict = {'Watershed_txt':'Watershed'}
 wshed_dict = {'Watershed_txt':'Watershed', 'Basin_':'Basin'}
 points_rename = temp + r"\points_rename"
@@ -158,7 +158,7 @@ bounds_new_order = (["Index_ID","OUTFALL_ID","Boundary_Type","Jurisdiction",
 "HANSEN_ID","SOURCE","COMMENTS","Watershed","Basin","Acres_IND","Area_Acres"])
 wsheds_new_order = ["Index_ID","Area_Acres","Watershed","Basin"]
 
-print "Re-ordering fields and saving to " + archive
+print("Re-ordering fields and saving to " + archive)
 points_final = archive + r"\MS4_OFpoints_" + time.strftime("%m%d%Y")
 bounds_final= archive + r"\MS4_OFbounds_" + time.strftime("%m%d%Y")
 wsheds_final= archive + r"\MS4_watersheds_" + time.strftime("%m%d%Y")
@@ -167,12 +167,12 @@ reorder_fields(bounds_rename, bounds_final ,bounds_new_order,add_missing = False
 reorder_fields(wsheds_rename, wsheds_final, wsheds_new_order,add_missing = False)
 
 #copy result to "Current" directory - overwrite existing
-print "Copying same results to " + output
+print("Copying same results to " + output)
 arcpy.FeatureClassToFeatureClass_conversion(points_final,output,"OF_points_bes_pdx")
 arcpy.FeatureClassToFeatureClass_conversion(bounds_final,output,"OF_drainage_bounds_bes_pdx")
 arcpy.FeatureClassToFeatureClass_conversion(wsheds_final,output,"MS4_catchments_bes_pdx")
 
-print "... MS4_Hub_prep Finished"
+print("... MS4_Hub_prep Finished")
 
 
 
